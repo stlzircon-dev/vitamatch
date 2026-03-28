@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0f1e">
+<title>VitaMatch Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0f1e;--surf:#111827;--surf2:#1a2235;
+  --border:rgba(255,255,255,0.07);--accent:#e8c97a;
+  --text:#f0f0ee;--muted:#6b7a99;--ok:#4ecb8d;--bad:#e05c5c;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Mono',monospace}
+body{display:flex;flex-direction:column}
+
+/* HEADER */
+#hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(10,15,30,0.97);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--accent)}
+.logo span{color:var(--text);font-weight:400}
+#sel-badge{display:flex;align-items:center;gap:8px;background:var(--surf2);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 8px;display:none}
+#sel-swatch{width:18px;height:18px;border-radius:5px;border:1px solid rgba(255,255,255,0.15)}
+#sel-name{font-size:13px;color:var(--accent);font-weight:500}
+
+/* TABS */
+#tabs{display:flex;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:8px 2px;text-align:center;font-size:10px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-ic{font-size:18px;display:block;margin-bottom:2px}
+
+/* VIEWS */
+.view{display:none;flex:1;flex-direction:column;overflow:hidden}
+.view.on{display:flex}
+
+/* ── CAMERA ── */
+#cam-wrap{flex:1;position:relative;overflow:hidden;background:#000}
+video{width:100%;height:100%;object-fit:cover;display:block}
+#ring{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;border:3px solid var(--accent);box-shadow:0 0 0 2px rgba(0,0,0,.5),inset 0 0 0 1px rgba(0,0,0,.4);pointer-events:none;z-index:10}
+#ring::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:var(--accent)}
+#ring-lbl{position:absolute;left:50%;top:calc(38% + 46px);transform:translateX(-50%);font-size:10px;color:var(--accent);background:rgba(0,0,0,.6);padding:2px 10px;border-radius:10px;pointer-events:none;white-space:nowrap;z-index:10}
+#live-box{position:absolute;top:12px;left:12px;z-index:20;display:flex;align-items:center;gap:10px;background:rgba(10,15,30,.88);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+#live-sw{width:36px;height:36px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:#888}
+#live-name{font-size:15px;color:var(--accent);font-weight:500}
+#live-de{font-size:9px;color:var(--muted)}
+#no-cam{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);text-align:center;padding:20px}
+#no-cam .ic{font-size:44px}
+#no-cam p{font-size:12px;line-height:1.6}
+.btn-start{margin-top:8px;padding:12px 24px;background:var(--accent);color:#0a0f1e;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+
+/* strip */
+#strip-wrap{background:rgba(10,15,30,.96);border-top:1px solid var(--border);flex-shrink:0}
+#sys-btns{display:flex;gap:8px;padding:8px 12px 4px}
+.sys-btn{font-family:'DM Mono',monospace;font-size:10px;padding:3px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;letter-spacing:.5px}
+.sys-btn.on{background:var(--accent);color:#0a0f1e;border-color:var(--accent)}
+#strip{display:flex;gap:6px;overflow-x:auto;padding:0 12px 8px;scrollbar-width:none}
+#strip::-webkit-scrollbar{display:none}
+.grp{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
+.grp-lbl{font-size:8px;color:var(--muted);letter-spacing:.5px}
+.chips{display:flex;gap:3px}
+.chip{width:36px;height:36px;border-radius:8px;border:2px solid transparent;cursor:pointer;transition:all .15s;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;flex-shrink:0}
+.chip.sel{border-color:var(--accent);transform:scale(1.12);box-shadow:0 0 12px rgba(232,201,122,.5)}
+.chip.best{border-color:var(--ok);box-shadow:0 0 10px rgba(78,203,141,.4)}
+.chip-lbl{font-size:7px;color:rgba(0,0,0,.7);font-weight:700;line-height:1}
+
+/* shutter */
+#shutter-row{display:flex;align-items:center;justify-content:center;gap:24px;padding:8px 20px 12px}
+.btn-ic{width:44px;height:44px;border-radius:12px;background:var(--surf2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:all .15s}
+.btn-ic:active{transform:scale(.94)}
+#shutter{width:64px;height:64px;border-radius:50%;background:white;border:4px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 0 3px rgba(255,255,255,.1)}
+#shutter:active{transform:scale(.92)}
+#shutter-in{width:52px;height:52px;border-radius:50%;background:white}
+
+/* ── PHOTO ── */
+#photo-view{flex:1;overflow-y:auto;padding:14px;gap:12px}
+#photo-wrap{position:relative;border-radius:14px;overflow:hidden;background:var(--surf);flex-shrink:0}
+#photo-canvas{width:100%;display:block;cursor:crosshair}
+#pick-dot{position:absolute;width:22px;height:22px;border-radius:50%;border:3px solid white;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.6);display:none}
+#photo-empty{padding:60px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--muted);font-size:12px;text-align:center}
+#photo-empty .ic{font-size:40px}
+.sec-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+#sampled-row{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;display:none;align-items:center;gap:14px}
+#samp-sw{width:52px;height:52px;border-radius:12px;border:2px solid rgba(255,255,255,.1);flex-shrink:0}
+#samp-rgb{font-size:12px;margin-top:2px}
+#samp-hex{font-size:11px;color:var(--muted)}
+#hint{text-align:center;font-size:11px;color:var(--muted);line-height:1.6;padding:8px}
+#match-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mc{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:all .15s}
+.mc.top{border-color:var(--accent);background:rgba(232,201,122,.06)}
+.mc-sw{height:48px;border-radius:10px;border:1px solid rgba(255,255,255,.1)}
+.mc-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.mc-meta{font-size:10px;color:var(--muted);line-height:1.5}
+.mc-pct{font-size:20px;font-family:'Syne',sans-serif;font-weight:800}
+.pct-ok{color:var(--ok)}.pct-mid{color:var(--accent)}.pct-bad{color:var(--bad)}
+.btn-save{width:100%;padding:14px;background:var(--accent);color:#0a0f1e;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
+
+/* ── KEY VIEW ── */
+#key-view{flex:1;overflow-y:auto;padding:14px}
+.ksec{margin-bottom:24px}
+.ksec-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.key-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:8px}
+.kcard{border-radius:12px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.kcard.sel{border-color:var(--accent);box-shadow:0 0 12px rgba(232,201,122,.3)}
+.kcard:active{transform:scale(.96)}
+.ksw{height:46px}
+.kinfo{background:var(--surf);padding:4px 6px}
+.kname{font-family:'Syne',sans-serif;font-size:11px;font-weight:700}
+.kdesc{font-size:8px;color:var(--muted);margin-top:1px;line-height:1.3}
+
+/* ── HISTORY ── */
+#hist-view{flex:1;overflow-y:auto;padding:14px;gap:10px}
+#hist-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;text-align:center;padding:60px 20px}
+#hist-empty .ic{font-size:40px}
+.hcard{background:var(--surf);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex}
+.hthumb{width:88px;height:88px;object-fit:cover;flex-shrink:0}
+.hbody{flex:1;padding:10px;display:flex;flex-direction:column;justify-content:space-between}
+.htop{display:flex;justify-content:space-between;align-items:flex-start}
+.hshade{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--accent)}
+.hsys{font-size:10px;color:var(--muted)}
+.hsw{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1)}
+.hdate{font-size:10px;color:var(--muted)}
+.hbot{display:flex;align-items:center;justify-content:space-between}
+.hpct{font-size:13px;font-family:'Syne',sans-serif;font-weight:700}
+.hbtns{display:flex;gap:6px}
+.btn-sm{padding:3px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+
+/* TOAST */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surf2);border:1px solid var(--border);border-radius:20px;padding:8px 20px;font-size:12px;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div class="logo">Vita<span>Match</span></div>
+  <div id="sel-badge">
+    <div id="sel-swatch"></div>
+    <span id="sel-name"></span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div id="tabs">
+  <div class="tab on" data-t="cam"><span class="tab-ic">📷</span>Camera</div>
+  <div class="tab" data-t="photo"><span class="tab-ic">🔬</span>Analiză</div>
+  <div class="tab" data-t="key"><span class="tab-ic">🦷</span>Cheie Vita</div>
+  <div class="tab" data-t="hist"><span class="tab-ic">📋</span>Istoric</div>
+</div>
+
+<!-- ══ CAMERA ══ -->
+<div class="view on" id="v-cam">
+  <div id="cam-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="ring"></div>
+    <div id="ring-lbl">Poziționați pe dinte</div>
+    <div id="live-box">
+      <div id="live-sw"></div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Culoare Live</div>
+        <div id="live-name">—</div>
+        <div id="live-de">Așteptare cameră...</div>
+      </div>
+    </div>
+    <div id="no-cam">
+      <div class="ic">📷</div>
+      <p>Apăsați pentru a porni camera</p>
+      <button class="btn-start" onclick="startCam()">Pornește Camera</button>
+    </div>
+  </div>
+  <div id="strip-wrap">
+    <div id="sys-btns">
+      <button class="sys-btn on" onclick="setSys('c')">Classical</button>
+      <button class="sys-btn" onclick="setSys('m')">3D-Master</button>
+    </div>
+    <div id="strip"></div>
+    <div id="shutter-row">
+      <div class="btn-ic" onclick="flipCam()" title="Schimbă camera">🔄</div>
+      <div id="shutter" onclick="capture()"><div id="shutter-in"></div></div>
+      <div class="btn-ic" id="flash-btn" onclick="toggleFlash()">⚡</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PHOTO ══ -->
+<div class="view" id="v-photo" style="overflow-y:auto;padding:14px;gap:12px">
+  <div id="photo-wrap">
+    <canvas id="photo-canvas" onclick="pickColor(event)"></canvas>
+    <div id="pick-dot"></div>
+    <div id="photo-empty">
+      <div class="ic">📸</div>
+      <p>Capturați o fotografie<br>din vizualizarea camerei</p>
+    </div>
+  </div>
+  <div id="hint">👆 Atingeți fotografia pentru a preleva culoarea dintelui</div>
+  <div id="sampled-row">
+    <div id="samp-sw"></div>
+    <div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Culoare prelevată</div>
+      <div id="samp-rgb">—</div>
+      <div id="samp-hex">—</div>
+    </div>
+  </div>
+  <div id="matches-wrap" style="display:none">
+    <div class="sec-title">Top potriviri Vita</div>
+    <div id="match-grid"></div>
+    <button class="btn-save" onclick="saveHist()">💾 Salvează în Istoric</button>
+  </div>
+</div>
+
+<!-- ══ KEY ══ -->
+<div class="view" id="v-key">
+  <div id="key-view">
+    <div class="ksec">
+      <div class="ksec-title">VITA Classical A1–D4</div>
+      <div class="key-grid" id="kg-c"></div>
+    </div>
+    <div class="ksec">
+      <div class="ksec-title">VITA 3D-Master</div>
+      <div class="key-grid" id="kg-m"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+<div class="view" id="v-hist">
+  <div id="hist-view">
+    <div id="hist-empty">
+      <div class="ic">📋</div>
+      <p>Niciun caz salvat.<br>Capturați și analizați fotografii.</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<canvas id="tmp-canvas" style="display:none"></canvas>
+
+<script>
+// ── DATA ──────────────────────────────────────────
+const C = [
+  {id:'A1', n:'A1', g:'A', r:234,gr:214,b:182, d:'Foarte deschis, roz-gălbui'},
+  {id:'A2', n:'A2', g:'A', r:228,gr:206,b:170, d:'Deschis, galben-roz'},
+  {id:'A3', n:'A3', g:'A', r:218,gr:192,b:152, d:'Mediu, galben-portocaliu'},
+  {id:'A35',n:'A3.5',g:'A',r:210,gr:182,b:138, d:'Mediu-închis'},
+  {id:'A4', n:'A4', g:'A', r:196,gr:165,b:118, d:'Închis, galben-brun'},
+  {id:'B1', n:'B1', g:'B', r:238,gr:220,b:188, d:'Foarte deschis, galben'},
+  {id:'B2', n:'B2', g:'B', r:230,gr:210,b:174, d:'Deschis, galben'},
+  {id:'B3', n:'B3', g:'B', r:220,gr:198,b:158, d:'Mediu, galben-auriu'},
+  {id:'B4', n:'B4', g:'B', r:208,gr:185,b:140, d:'Mediu-închis, auriu'},
+  {id:'C1', n:'C1', g:'C', r:226,gr:208,b:178, d:'Deschis, gri-galben'},
+  {id:'C2', n:'C2', g:'C', r:214,gr:196,b:164, d:'Mediu, gri'},
+  {id:'C3', n:'C3', g:'C', r:200,gr:180,b:148, d:'Mediu-închis, gri-brun'},
+  {id:'C4', n:'C4', g:'C', r:184,gr:162,b:128, d:'Închis, gri-brun'},
+  {id:'D2', n:'D2', g:'D', r:222,gr:204,b:176, d:'Deschis, roz-gri'},
+  {id:'D3', n:'D3', g:'D', r:210,gr:190,b:160, d:'Mediu, roz-gri'},
+  {id:'D4', n:'D4', g:'D', r:196,gr:174,b:142, d:'Mediu-închis, roz-gri'},
+];
+const M = [
+  {id:'1M1',  n:'1M1',  g:'1',  r:245,gr:232,b:205,d:'Cel mai deschis'},
+  {id:'1M2',  n:'1M2',  g:'1',  r:240,gr:226,b:197,d:'Foarte deschis'},
+  {id:'2L15', n:'2L1.5',g:'2L', r:238,gr:222,b:192,d:'Deschis, galben'},
+  {id:'2L25', n:'2L2.5',g:'2L', r:232,gr:216,b:183,d:'Deschis'},
+  {id:'2M1',  n:'2M1',  g:'2M', r:234,gr:216,b:186,d:'Deschis mediu'},
+  {id:'2M2',  n:'2M2',  g:'2M', r:226,gr:207,b:174,d:'Mediu'},
+  {id:'2M3',  n:'2M3',  g:'2M', r:218,gr:198,b:163,d:'Mediu-galben'},
+  {id:'2R15', n:'2R1.5',g:'2R', r:230,gr:210,b:175,d:'Deschis, roz'},
+  {id:'2R25', n:'2R2.5',g:'2R', r:222,gr:200,b:164,d:'Mediu, roz'},
+  {id:'3L15', n:'3L1.5',g:'3L', r:220,gr:200,b:165,d:'Mediu, galben'},
+  {id:'3L25', n:'3L2.5',g:'3L', r:210,gr:190,b:152,d:'Mediu'},
+  {id:'3M1',  n:'3M1',  g:'3M', r:212,gr:190,b:154,d:'Mediu'},
+  {id:'3M2',  n:'3M2',  g:'3M', r:202,gr:180,b:142,d:'Mediu-închis'},
+  {id:'3M3',  n:'3M3',  g:'3M', r:190,gr:168,b:128,d:'Închis'},
+  {id:'3R15', n:'3R1.5',g:'3R', r:208,gr:186,b:148,d:'Mediu, roz'},
+  {id:'3R25', n:'3R2.5',g:'3R', r:196,gr:174,b:136,d:'Mediu-închis, roz'},
+  {id:'4L15', n:'4L1.5',g:'4L', r:196,gr:174,b:134,d:'Închis, galben'},
+  {id:'4L25', n:'4L2.5',g:'4L', r:184,gr:160,b:118,d:'Închis'},
+  {id:'4M1',  n:'4M1',  g:'4M', r:188,gr:164,b:122,d:'Închis'},
+  {id:'4M2',  n:'4M2',  g:'4M', r:176,gr:152,b:108,d:'Foarte închis'},
+  {id:'4M3',  n:'4M3',  g:'4M', r:162,gr:138,b:92, d:'Foarte închis'},
+  {id:'5M1',  n:'5M1',  g:'5',  r:168,gr:142,b:98, d:'Cel mai închis'},
+  {id:'5M2',  n:'5M2',  g:'5',  r:154,gr:128,b:82, d:'Cel mai închis'},
+  {id:'5M3',  n:'5M3',  g:'5',  r:140,gr:114,b:66, d:'Cel mai închis'},
+];
+const ALL=[...C,...M];
+
+// ── COLOR MATH ──────────────────────────────────
+function toLab(r,g,b){
+  r/=255;g/=255;b/=255;
+  r=r>.04045?Math.pow((r+.055)/1.055,2.4):r/12.92;
+  g=g>.04045?Math.pow((g+.055)/1.055,2.4):g/12.92;
+  b=b>.04045?Math.pow((b+.055)/1.055,2.4):b/12.92;
+  let x=(r*.4124+g*.3576+b*.1805)/.95047;
+  let y=(r*.2126+g*.7152+b*.0722)/1;
+  let z=(r*.0193+g*.1192+b*.9505)/1.08883;
+  const f=v=>v>.008856?Math.pow(v,1/3):7.787*v+16/116;
+  x=f(x);y=f(y);z=f(z);
+  return{L:116*y-16,a:500*(x-y),b:200*(y-z)};
+}
+function dE(r1,g1,b1,r2,g2,b2){
+  const a=toLab(r1,g1,b1),bb=toLab(r2,g2,b2);
+  return Math.sqrt((a.L-bb.L)**2+(a.a-bb.a)**2+(a.b-bb.b)**2);
+}
+function best(r,g,b,n=4){
+  return ALL.map(s=>({...s,de:dE(r,g,b,s.r,s.gr,s.b)})).sort((a,b)=>a.de-b.de).slice(0,n);
+}
+function pct(de){return Math.max(0,Math.round(100-de*2));}
+function css(s){return`rgb(${s.r},${s.gr},${s.b})`;}
+function groupBy(arr){return arr.reduce((a,x)=>{(a[x.g]=a[x.g]||[]).push(x);return a;},{});}
+
+// ── STATE ─────────────────────────────────────────
+let sys='c', selShade=null, stream=null, facing='environment';
+let flashOn=false, captured=null, sampCol=null, liveTimer=null;
+let hist=[];
+try{hist=JSON.parse(localStorage.getItem('vm2')||'[]');}catch{}
+
+// ── TABS ──────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    document.getElementById('v-'+t.dataset.t).classList.add('on');
+    if(t.dataset.t==='cam'&&!stream) startCam();
+    if(t.dataset.t==='photo'&&captured) drawPhoto();
+  });
+});
+
+// ── CAMERA ────────────────────────────────────────
+async function startCam(){
+  document.getElementById('no-cam').style.display='none';
+  try{
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:facing,width:{ideal:1920},height:{ideal:1080}},audio:false
+    });
+    const v=document.getElementById('video');
+    v.srcObject=stream;
+    await v.play();
+    startLive();
+  }catch(e){
+    document.getElementById('no-cam').style.display='flex';
+    toast('Eroare cameră: '+e.message);
+  }
+}
+function flipCam(){facing=facing==='environment'?'user':'environment';startCam();}
+function toggleFlash(){
+  if(!stream)return;
+  const t=stream.getVideoTracks()[0];
+  if(!t)return;
+  flashOn=!flashOn;
+  try{t.applyConstraints({advanced:[{torch:flashOn}]});}catch{}
+  document.getElementById('flash-btn').style.opacity=flashOn?1:.5;
+}
+function startLive(){
+  if(liveTimer)clearInterval(liveTimer);
+  liveTimer=setInterval(()=>{
+    const v=document.getElementById('video');
+    if(!v.videoWidth)return;
+    const c=document.getElementById('tmp-canvas');
+    c.width=v.videoWidth;c.height=v.videoHeight;
+    const ctx=c.getContext('2d');ctx.drawImage(v,0,0);
+    const cx=Math.round(v.videoWidth/2),cy=Math.round(v.videoHeight*.38),sz=24;
+    const px=ctx.getImageData(Math.max(0,cx-sz/2),Math.max(0,cy-sz/2),sz,sz).data;
+    let r=0,g=0,b=0;const n=px.length/4;
+    for(let i=0;i<px.length;i+=4){r+=px[i];g+=px[i+1];b+=px[i+2];}
+    r=Math.round(r/n);g=Math.round(g/n);b=Math.round(b/n);
+    document.getElementById('live-sw').style.background=`rgb(${r},${g},${b})`;
+    const m=best(r,g,b,1)[0];
+    document.getElementById('live-name').textContent=m.n;
+    document.getElementById('live-de').textContent=`ΔE=${m.de.toFixed(1)} · ${pct(m.de)}%`;
+    document.querySelectorAll('.chip').forEach(ch=>{
+      if(!ch.classList.contains('sel')) ch.classList.remove('best');
+    });
+    const bc=document.getElementById('chip-'+m.id);
+    if(bc&&!bc.classList.contains('sel')) bc.classList.add('best');
+  },250);
+}
+function capture(){
+  const v=document.getElementById('video');
+  if(!v.srcObject){toast('Pornește camera mai întâi');return;}
+  const c=document.createElement('canvas');
+  c.width=v.videoWidth;c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  captured=c.toDataURL('image/jpeg',.92);
+  sampCol=null;
+  document.getElementById('hint').style.display='block';
+  document.getElementById('sampled-row').style.display='none';
+  document.getElementById('matches-wrap').style.display='none';
+  document.getElementById('pick-dot').style.display='none';
+  // switch to photo tab
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  document.querySelector('[data-t="photo"]').classList.add('on');
+  document.getElementById('v-photo').classList.add('on');
+  drawPhoto();
+  toast('Atingeți fotografia pentru a preleva culoarea');
+}
+function drawPhoto(){
+  if(!captured)return;
+  document.getElementById('photo-empty').style.display='none';
+  const canvas=document.getElementById('photo-canvas');
+  const img=new Image();
+  img.onload=()=>{canvas.width=img.width;canvas.height=img.height;canvas.getContext('2d').drawImage(img,0,0);};
+  img.src=captured;
+}
+
+// ── PHOTO PICKER ──────────────────────────────────
+function pickColor(e){
+  if(!captured)return;
+  const canvas=document.getElementById('photo-canvas');
+  const rect=canvas.getBoundingClientRect();
+  const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
+  const touch=e.touches?e.touches[0]:e;
+  const x=Math.round((touch.clientX-rect.left)*sx);
+  const y=Math.round((touch.clientY-rect.top)*sy);
+  const ctx=canvas.getContext('2d'),r=10;
+  const px=ctx.getImageData(Math.max(0,x-r),Math.max(0,y-r),r*2,r*2).data;
+  let rv=0,gv=0,bv=0;const n=px.length/4;
+  for(let i=0;i<px.length;i+=4){rv+=px[i];gv+=px[i+1];bv+=px[i+2];}
+  sampCol={r:Math.round(rv/n),g:Math.round(gv/n),b:Math.round(bv/n)};
+  const dot=document.getElementById('pick-dot');
+  dot.style.display='block';
+  dot.style.left=(touch.clientX-rect.left)+'px';
+  dot.style.top=(touch.clientY-rect.top)+'px';
+  dot.style.background=`rgb(${sampCol.r},${sampCol.g},${sampCol.b})`;
+  document.getElementById('hint').style.display='none';
+  document.getElementById('sampled-row').style.display='flex';
+  document.getElementById('samp-sw').style.background=`rgb(${sampCol.r},${sampCol.g},${sampCol.b})`;
+  document.getElementById('samp-rgb').textContent=`R:${sampCol.r}  G:${sampCol.g}  B:${sampCol.b}`;
+  document.getElementById('samp-hex').textContent='#'+[sampCol.r,sampCol.g,sampCol.b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();
+  renderMatches();
+}
+document.getElementById('photo-canvas').addEventListener('touchstart',e=>{e.preventDefault();pickColor(e);},{passive:false});
+
+function renderMatches(){
+  const m=best(sampCol.r,sampCol.g,sampCol.b,4);
+  const grid=document.getElementById('match-grid');
+  grid.innerHTML='';
+  m.forEach((s,i)=>{
+    const p=pct(s.de);
+    const pc=p>=80?'pct-ok':p>=60?'pct-mid':'pct-bad';
+    const d=document.createElement('div');
+    d.className='mc'+(i===0?' top':'');
+    d.innerHTML=`<div class="mc-sw" style="background:${css(s)}"></div>
+      <div class="mc-name">${i===0?'🏆 ':''}${s.n}</div>
+      <div class="mc-meta">${s.d}<br>ΔE = ${s.de.toFixed(1)}</div>
+      <div class="mc-pct ${pc}">${p}%</div>`;
+    d.onclick=()=>{selShade=s;updateBadge();toast('Selectat: '+s.n);};
+    grid.appendChild(d);
+  });
+  document.getElementById('matches-wrap').style.display='block';
+  selShade=m[0];updateBadge();
+}
+
+// ── STRIP ─────────────────────────────────────────
+function setSys(s){
+  sys=s;
+  document.querySelectorAll('.sys-btn').forEach(b=>b.classList.toggle('on',b.textContent.toLowerCase().includes(s==='c'?'class':'3d')));
+  buildStrip();
+}
+function buildStrip(){
+  const strip=document.getElementById('strip');strip.innerHTML='';
+  const data=sys==='c'?C:M;
+  const groups=groupBy(data);
+  Object.entries(groups).forEach(([g,arr])=>{
+    const gEl=document.createElement('div');gEl.className='grp';
+    gEl.innerHTML=`<div class="grp-lbl">${g}</div><div class="chips" id="chips-${g}"></div>`;
+    const chips=gEl.querySelector('.chips');
+    arr.forEach(s=>{
+      const ch=document.createElement('div');
+      ch.className='chip'+(selShade?.id===s.id?' sel':'');
+      ch.id='chip-'+s.id;
+      ch.style.background=css(s);
+      ch.innerHTML=`<span class="chip-lbl">${s.n}</span>`;
+      ch.onclick=()=>{selShade=s;updateBadge();buildStrip();toast(s.n+' selectat');};
+      chips.appendChild(ch);
+    });
+    strip.appendChild(gEl);
+  });
+}
+function updateBadge(){
+  if(!selShade){document.getElementById('sel-badge').style.display='none';return;}
+  document.getElementById('sel-badge').style.display='flex';
+  document.getElementById('sel-swatch').style.background=css(selShade);
+  document.getElementById('sel-name').textContent=selShade.n;
+  document.querySelectorAll('.kcard').forEach(c=>c.classList.toggle('sel',c.dataset.id===selShade.id));
+}
+
+// ── KEY VIEW ──────────────────────────────────────
+function buildKey(){
+  buildKeyGrid('kg-c',C);
+  buildKeyGrid('kg-m',M);
+}
+function buildKeyGrid(id,data){
+  const g=document.getElementById(id);g.innerHTML='';
+  data.forEach(s=>{
+    const c=document.createElement('div');
+    c.className='kcard'+(selShade?.id===s.id?' sel':'');
+    c.dataset.id=s.id;
+    c.innerHTML=`<div class="ksw" style="background:${css(s)}"></div><div class="kinfo"><div class="kname">${s.n}</div><div class="kdesc">${s.d}</div></div>`;
+    c.onclick=()=>{selShade=s;updateBadge();buildStrip();toast('Selectat: '+s.n);};
+    g.appendChild(c);
+  });
+}
+
+// ── HISTORY ──────────────────────────────────────
+function saveHist(){
+  if(!sampCol||!captured){toast('Prelevați mai întâi o culoare');return;}
+  const m=best(sampCol.r,sampCol.g,sampCol.b,1)[0];
+  const e={id:Date.now(),date:new Date().toLocaleString('ro-RO'),thumb:captured,col:sampCol,shade:m,pct:pct(m.de)};
+  hist.unshift(e);
+  try{localStorage.setItem('vm2',JSON.stringify(hist));}catch{}
+  renderHist();
+  toast('Salvat în istoric!');
+}
+function renderHist(){
+  const wrap=document.getElementById('hist-view');wrap.innerHTML='';
+  if(!hist.length){
+    wrap.innerHTML='<div id="hist-empty"><div class="ic">📋</div><p>Niciun caz salvat.<br>Capturați și analizați fotografii.</p></div>';
+    return;
+  }
+  hist.forEach(e=>{
+    const p=e.pct,pc=p>=80?'pct-ok':p>=60?'pct-mid':'pct-bad';
+    const c=document.createElement('div');c.className='hcard';
+    c.innerHTML=`<img class="hthumb" src="${e.thumb}">
+      <div class="hbody">
+        <div class="htop">
+          <div><div class="hshade">${e.shade.n}</div><div class="hsys">${e.shade.id.match(/^[A-D]/)?'Classical':'3D-Master'}</div></div>
+          <div class="hsw" style="background:${css(e.shade)}"></div>
+        </div>
+        <div class="hdate">${e.date}</div>
+        <div class="hbot">
+          <span class="hpct ${pc}">${p}%</span>
+          <div class="hbtns">
+            <button class="btn-sm" onclick="loadHist(${e.id})">Vezi</button>
+            <button class="btn-sm" onclick="delHist(${e.id})">Șterge</button>
+          </div>
+        </div>
+      </div>`;
+    wrap.appendChild(c);
+  });
+}
+function loadHist(id){
+  const e=hist.find(x=>x.id===id);if(!e)return;
+  captured=e.thumb;sampCol=e.col;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  document.querySelector('[data-t="photo"]').classList.add('on');
+  document.getElementById('v-photo').classList.add('on');
+  document.getElementById('photo-empty').style.display='none';
+  document.getElementById('hint').style.display='none';
+  document.getElementById('sampled-row').style.display='flex';
+  document.getElementById('samp-sw').style.background=`rgb(${e.col.r},${e.col.g},${e.col.b})`;
+  document.getElementById('samp-rgb').textContent=`R:${e.col.r}  G:${e.col.g}  B:${e.col.b}`;
+  document.getElementById('samp-hex').textContent='#'+[e.col.r,e.col.g,e.col.b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();
+  drawPhoto();
+  const m=best(e.col.r,e.col.g,e.col.b,4);
+  const grid=document.getElementById('match-grid');grid.innerHTML='';
+  m.forEach((s,i)=>{
+    const p=pct(s.de),pc=p>=80?'pct-ok':p>=60?'pct-mid':'pct-bad';
+    const d=document.createElement('div');d.className='mc'+(i===0?' top':'');
+    d.innerHTML=`<div class="mc-sw" style="background:${css(s)}"></div><div class="mc-name">${i===0?'🏆 ':''}${s.n}</div><div class="mc-meta">${s.d}<br>ΔE=${s.de.toFixed(1)}</div><div class="mc-pct ${pc}">${p}%</div>`;
+    grid.appendChild(d);
+  });
+  document.getElementById('matches-wrap').style.display='block';
+}
+function delHist(id){
+  hist=hist.filter(x=>x.id!==id);
+  try{localStorage.setItem('vm2',JSON.stringify(hist));}catch{}
+  renderHist();
+}
+
+// ── TOAST ─────────────────────────────────────────
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── INIT ──────────────────────────────────────────
+buildStrip();
+buildKey();
+renderHist();
+startCam();
+</script>
+</body>
+</html>
